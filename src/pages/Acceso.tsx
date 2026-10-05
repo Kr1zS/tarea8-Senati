@@ -1,10 +1,21 @@
-import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import {
+  useState,
+} from "react";
+
+import {
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 
 type Empleado = {
   codigo: string;
   nombre: string;
-  estado: "Activo" | "Descanso" | "Despedido";
+
+  estado:
+    | "Activo"
+    | "Descanso"
+    | "Despedido";
+
   ultimoAcceso: string;
 };
 
@@ -15,12 +26,14 @@ const empleadosIniciales: Empleado[] = [
     estado: "Activo",
     ultimoAcceso: "",
   },
+
   {
     codigo: "EMP002",
     nombre: "María Torres Vega",
     estado: "Activo",
     ultimoAcceso: "",
   },
+
   {
     codigo: "EMP003",
     nombre: "Diego Mendoza Ruiz",
@@ -31,92 +44,166 @@ const empleadosIniciales: Empleado[] = [
 
 function Acceso() {
   const navigate = useNavigate();
+
   const { rol } = useParams();
 
-  const [codigo, setCodigo] = useState("");
-  const [error, setError] = useState("");
-  const [mostrarCodigo, setMostrarCodigo] = useState(false);
+  const [codigo, setCodigo] =
+    useState("");
 
-  const esAdmin = rol === "administrador";
+  const [error, setError] =
+    useState("");
 
-  const obtenerEmpleados = (): Empleado[] => {
-    const guardados = localStorage.getItem("empleados");
+  const [
+    mostrarCodigo,
+    setMostrarCodigo,
+  ] = useState(false);
+
+  const esAdmin =
+    rol === "administrador";
+
+  const obtenerEmpleados = () => {
+    const guardados =
+      localStorage.getItem(
+        "empleados"
+      );
 
     if (guardados) {
-      return JSON.parse(guardados);
+      try {
+        return JSON.parse(
+          guardados
+        ) as Empleado[];
+      } catch {
+        // continúa abajo
+      }
     }
 
     localStorage.setItem(
       "empleados",
-      JSON.stringify(empleadosIniciales)
+      JSON.stringify(
+        empleadosIniciales
+      )
     );
 
     return empleadosIniciales;
   };
 
   const validarCodigo = () => {
+    const codigoIngresado =
+      codigo.trim().toUpperCase();
+
+    /*
+     * ADMINISTRADOR
+     */
     if (esAdmin) {
-      if (codigo === "ADMIN2026") {
+      if (
+        codigoIngresado ===
+        "ADMIN2026"
+      ) {
+        setError("");
+
         localStorage.setItem(
           "sesionAdmin",
           JSON.stringify({
-            acceso: new Date().toISOString(),
+            acceso:
+              new Date().toISOString(),
           })
         );
 
-        navigate("/administrador");
+        navigate(
+          "/administrador"
+        );
+
         return;
       }
 
-      setError("Código de administrador incorrecto.");
+      setError(
+        "Código de administrador incorrecto."
+      );
+
       return;
     }
 
-    const empleados = obtenerEmpleados();
+    /*
+     * EMPLEADO
+     */
+    const empleados =
+      obtenerEmpleados();
 
-    const empleado = empleados.find(
-      (item) => item.codigo === codigo.toUpperCase()
-    );
+    const empleado =
+      empleados.find(
+        (item) =>
+          item.codigo ===
+          codigoIngresado
+      );
 
     if (!empleado) {
-      setError("Código de empleado incorrecto.");
+      setError(
+        "Código de empleado incorrecto."
+      );
+
       return;
     }
 
-    if (empleado.estado === "Despedido") {
-      setError("Este empleado ya no tiene acceso al sistema.");
+    if (
+      empleado.estado ===
+      "Despedido"
+    ) {
+      setError(
+        "Este empleado ya no tiene acceso al sistema."
+      );
+
       return;
     }
 
-    if (empleado.estado === "Descanso") {
-      setError("Empleado actualmente en descanso.");
+    if (
+      empleado.estado ===
+      "Descanso"
+    ) {
+      setError(
+        "Este empleado se encuentra en descanso."
+      );
+
       return;
     }
 
-    const fechaAcceso = new Date().toISOString();
+    const ahora =
+      new Date().toISOString();
 
-    const empleadosActualizados = empleados.map((item) =>
-      item.codigo === empleado.codigo
-        ? {
-            ...item,
-            ultimoAcceso: fechaAcceso,
-          }
-        : item
-    );
+    const actualizados =
+      empleados.map(
+        (item) =>
+          item.codigo ===
+          empleado.codigo
+            ? {
+                ...item,
+                ultimoAcceso:
+                  ahora,
+              }
+            : item
+      );
 
     localStorage.setItem(
       "empleados",
-      JSON.stringify(empleadosActualizados)
+      JSON.stringify(
+        actualizados
+      )
     );
 
     localStorage.setItem(
       "empleadoSesion",
       JSON.stringify({
-        codigo: empleado.codigo,
-        nombre: empleado.nombre,
-        acceso: fechaAcceso,
+        codigo:
+          empleado.codigo,
+
+        nombre:
+          empleado.nombre,
+
+        acceso:
+          ahora,
       })
     );
+
+    setError("");
 
     navigate("/empleado");
   };
@@ -127,7 +214,9 @@ function Acceso() {
       <div className="w-full max-w-[430px] bg-white/90 backdrop-blur-xl rounded-[32px] p-8 shadow-2xl border border-white">
 
         <button
-          onClick={() => navigate("/")}
+          onClick={() =>
+            navigate("/")
+          }
           className="text-slate-500 hover:text-blue-600 cursor-pointer"
         >
           ← Volver
@@ -136,7 +225,9 @@ function Acceso() {
         <div className="text-center mt-7">
 
           <div className="mx-auto w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-100 to-violet-100 flex items-center justify-center text-4xl mb-5">
-            {esAdmin ? "👑" : "👤"}
+            {esAdmin
+              ? "👑"
+              : "👤"}
           </div>
 
           <p className="text-blue-500 text-xs uppercase tracking-[0.3em]">
@@ -144,7 +235,9 @@ function Acceso() {
           </p>
 
           <h1 className="text-3xl font-bold text-slate-800 mt-2 capitalize">
-            {rol}
+            {esAdmin
+              ? "Administrador"
+              : "Empleado"}
           </h1>
 
           <p className="text-slate-500 text-sm mt-2">
@@ -162,14 +255,23 @@ function Acceso() {
           <div className="relative mt-2">
 
             <input
-              type={mostrarCodigo ? "text" : "password"}
+              type={
+                mostrarCodigo
+                  ? "text"
+                  : "password"
+              }
               value={codigo}
               onChange={(e) => {
-                setCodigo(e.target.value);
+                setCodigo(
+                  e.target.value
+                );
+
                 setError("");
               }}
               onKeyDown={(e) => {
-                if (e.key === "Enter") {
+                if (
+                  e.key === "Enter"
+                ) {
                   validarCodigo();
                 }
               }}
@@ -178,16 +280,21 @@ function Acceso() {
                   ? "ADMIN2026"
                   : "Ej. EMP001"
               }
-              className="w-full bg-slate-50 border border-slate-200 px-5 pr-14 py-4 rounded-2xl outline-none focus:border-blue-400"
+              className="w-full bg-slate-50 border border-slate-200 px-5 pr-14 py-4 rounded-2xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
             />
 
             <button
+              type="button"
               onClick={() =>
-                setMostrarCodigo(!mostrarCodigo)
+                setMostrarCodigo(
+                  !mostrarCodigo
+                )
               }
               className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer"
             >
-              {mostrarCodigo ? "🙈" : "👁️"}
+              {mostrarCodigo
+                ? "🙈"
+                : "👁️"}
             </button>
 
           </div>
@@ -199,8 +306,10 @@ function Acceso() {
           )}
 
           <button
-            onClick={validarCodigo}
-            className="w-full mt-6 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 text-white font-bold cursor-pointer"
+            onClick={
+              validarCodigo
+            }
+            className="w-full mt-6 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 text-white font-bold hover:opacity-90 cursor-pointer"
           >
             Ingresar
           </button>

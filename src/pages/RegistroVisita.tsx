@@ -1,10 +1,16 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import {
+  useState,
+} from "react";
+
+import {
+  useNavigate,
+} from "react-router-dom";
 
 type Visita = {
   codigo: string;
   dni: string;
   celular: string;
+
   visitante: string;
   nombres: string;
   apellidos: string;
@@ -16,6 +22,7 @@ type Visita = {
     | "Otros";
 
   carrera: string;
+
   consulta: string;
   respuesta: string;
 
@@ -25,9 +32,10 @@ type Visita = {
     | "Baja";
 
   estado:
-    | "Completada"
-    | "En Proceso"
-    | "Pendiente";
+    | "Pendiente"
+    | "Activo"
+    | "Rechazado"
+    | "Completada";
 
   fecha: string;
 
@@ -35,130 +43,230 @@ type Visita = {
   empleadoNombre: string;
 };
 
-type SesionEmpleado = {
-  codigo: string;
-  nombre: string;
-  acceso: string;
-};
-
 function RegistroVisita() {
-  const navigate = useNavigate();
+  const navigate =
+    useNavigate();
 
-  const [dni, setDni] = useState("");
-  const [celular, setCelular] = useState("");
-  const [nombres, setNombres] = useState("");
-  const [apellidos, setApellidos] = useState("");
+  const [dni, setDni] =
+    useState("");
 
-  const [asunto, setAsunto] = useState<
-    "Matrícula" | "Pagos" | "Tutoría" | "Otros" | ""
-  >("");
+  const [celular, setCelular] =
+    useState("");
 
-  const [carrera, setCarrera] = useState("");
-  const [mensaje, setMensaje] = useState("");
+  const [nombres, setNombres] =
+    useState("");
 
-  // EMPLEADO QUE ESTÁ LOGUEADO
-  const sesionEmpleado: SesionEmpleado | null = JSON.parse(
-    localStorage.getItem("empleadoSesion") || "null"
-  );
+  const [apellidos, setApellidos] =
+    useState("");
 
-  const registrarVisita = () => {
-    // VALIDAR DNI
-    if (dni.length !== 8) {
-      alert("Ingresa un DNI válido de 8 dígitos.");
-      return;
-    }
+  const [asunto, setAsunto] =
+    useState<
+      | "Matrícula"
+      | "Pagos"
+      | "Tutoría"
+      | "Otros"
+      | ""
+    >("");
 
-    // VALIDAR CAMPOS
-    if (
-      nombres.trim() === "" ||
-      apellidos.trim() === "" ||
-      asunto === "" ||
-      carrera === "" ||
-      mensaje.trim().length < 5
-    ) {
-      alert("Completa todos los campos obligatorios.");
-      return;
-    }
+  const [carrera, setCarrera] =
+    useState("");
 
-    // OBTENER VISITAS ANTERIORES
-    const guardadas = localStorage.getItem("visitas");
+  const [mensaje, setMensaje] =
+    useState("");
 
-    const visitasAnteriores: Visita[] = guardadas
-      ? JSON.parse(guardadas)
-      : [];
+  const registrarVisita =
+    () => {
+      if (
+        dni.length !== 8
+      ) {
+        alert(
+          "Ingresa un DNI válido de 8 dígitos."
+        );
 
-    // GENERAR CÓDIGO
-    const numero = visitasAnteriores.length + 1;
+        return;
+      }
 
-    const codigo = `VIS-${String(numero).padStart(4, "0")}`;
+      if (
+        nombres.trim() ===
+          "" ||
+        apellidos.trim() ===
+          "" ||
+        asunto === "" ||
+        carrera === "" ||
+        mensaje.trim()
+          .length < 5
+      ) {
+        alert(
+          "Completa todos los campos obligatorios."
+        );
 
-    // NUEVA VISITA
-    const nuevaVisita: Visita = {
-      codigo,
+        return;
+      }
 
-      dni,
-      celular,
+      let visitasAnteriores: Visita[] =
+        [];
 
-      visitante: `${nombres.trim()} ${apellidos.trim()}`,
+      const guardadas =
+        localStorage.getItem(
+          "visitas"
+        );
 
-      nombres: nombres.trim(),
-      apellidos: apellidos.trim(),
+      if (guardadas) {
+        try {
+          visitasAnteriores =
+            JSON.parse(
+              guardadas
+            );
+        } catch {
+          visitasAnteriores =
+            [];
+        }
+      }
 
-      asunto,
-      carrera,
+      /*
+       * GENERAR CÓDIGO SIN REPETIR
+       */
+      const numeros =
+        visitasAnteriores
+          .map((visita) => {
+            const numero =
+              Number(
+                visita.codigo
+                  .replace(
+                    "VIS-",
+                    ""
+                  )
+              );
 
-      consulta: mensaje.trim(),
+            return Number.isNaN(
+              numero
+            )
+              ? 0
+              : numero;
+          });
 
-      respuesta: "",
+      const siguiente =
+        numeros.length === 0
+          ? 1
+          : Math.max(
+              ...numeros
+            ) + 1;
 
-      prioridad: "Media",
+      const codigo =
+        `VIS-${String(
+          siguiente
+        ).padStart(4, "0")}`;
 
-      estado: "Pendiente",
+      const nuevaVisita: Visita =
+        {
+          codigo,
 
-      fecha: new Date()
-        .toISOString()
-        .split("T")[0],
+          dni,
 
-      // AQUÍ GUARDAMOS EL EMPLEADO
-      empleadoCodigo:
-        sesionEmpleado?.codigo || "SIN-ASIGNAR",
+          celular,
 
-      empleadoNombre:
-        sesionEmpleado?.nombre || "Sin asignar",
+          visitante:
+            `${nombres.trim()} ${apellidos.trim()}`,
+
+          nombres:
+            nombres.trim(),
+
+          apellidos:
+            apellidos.trim(),
+
+          asunto,
+
+          carrera,
+
+          consulta:
+            mensaje.trim(),
+
+          respuesta: "",
+
+          prioridad:
+            "Media",
+
+          estado:
+            "Pendiente",
+
+          fecha:
+            new Date()
+              .toISOString()
+              .split("T")[0],
+
+          /*
+           * QUEDA DISPONIBLE
+           */
+          empleadoCodigo:
+            "SIN-ASIGNAR",
+
+          empleadoNombre:
+            "Sin asignar",
+        };
+
+      const nuevasVisitas =
+        [
+          nuevaVisita,
+          ...visitasAnteriores,
+        ];
+
+      localStorage.setItem(
+        "visitas",
+        JSON.stringify(
+          nuevasVisitas
+        )
+      );
+
+      alert(
+        `✅ Visita ${codigo} registrada correctamente`
+      );
+
+      const sesionEmpleado =
+        localStorage.getItem(
+          "empleadoSesion"
+        );
+
+      const sesionAdmin =
+        localStorage.getItem(
+          "sesionAdmin"
+        );
+
+      if (
+        sesionEmpleado
+      ) {
+        navigate(
+          "/empleado"
+        );
+
+        return;
+      }
+
+      if (sesionAdmin) {
+        navigate(
+          "/administrador"
+        );
+
+        return;
+      }
+
+      navigate("/");
     };
 
-    // AGREGAR VISITA
-    const nuevasVisitas = [
-      nuevaVisita,
-      ...visitasAnteriores,
-    ];
-
-    // GUARDAR EN LOCALSTORAGE
-    localStorage.setItem(
-      "visitas",
-      JSON.stringify(nuevasVisitas)
+  const fechaActual =
+    new Date().toLocaleString(
+      "es-PE"
     );
 
-    alert("✅ Visita registrada correctamente");
-
-    // VOLVER AL DASHBOARD
-    navigate("/empleado");
-  };
-
-  const fechaActual =
-    new Date().toLocaleString("es-PE");
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#dbeafe] via-[#eff6ff] to-[#ede9fe]">
+    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-blue-50 to-violet-100">
 
-      {/* HEADER */}
       <header className="bg-gradient-to-r from-blue-700 via-blue-600 to-violet-600 text-white shadow-md">
 
         <div className="max-w-6xl mx-auto px-6 py-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
 
           <div className="flex items-center gap-3">
 
-            <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center font-bold shadow">
+            <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center font-bold">
               S
             </div>
 
@@ -174,46 +282,50 @@ function RegistroVisita() {
 
           </div>
 
-          <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              if (
+                localStorage.getItem(
+                  "empleadoSesion"
+                )
+              ) {
+                navigate(
+                  "/empleado"
+                );
 
-            {sesionEmpleado && (
-              <div className="hidden md:block text-right">
-
-                <p className="text-xs text-white/60">
-                  Registrando como
-                </p>
-
-                <p className="text-sm font-semibold">
-                  {sesionEmpleado.nombre}
-                </p>
-
-              </div>
-            )}
-
-            <button
-              onClick={() =>
-                navigate("/empleado")
+                return;
               }
-              className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl transition cursor-pointer"
-            >
-              👤 Panel Empleado
-            </button>
 
-          </div>
+              if (
+                localStorage.getItem(
+                  "sesionAdmin"
+                )
+              ) {
+                navigate(
+                  "/administrador"
+                );
+
+                return;
+              }
+
+              navigate("/");
+            }}
+            className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl cursor-pointer"
+          >
+            ← Volver al panel
+          </button>
 
         </div>
 
       </header>
 
-      {/* CONTENIDO */}
       <main className="flex justify-center px-4 py-10">
 
-        <div className="w-full max-w-3xl bg-white rounded-[32px] p-6 md:p-8 shadow-[0_25px_70px_rgba(30,64,175,0.15)] border border-white">
+        <div className="w-full max-w-3xl bg-white rounded-[32px] p-6 md:p-8 shadow-xl border border-white">
 
-          {/* TITULO */}
           <div className="text-center mb-8">
 
-            <div className="mx-auto w-20 h-20 bg-gradient-to-br from-blue-100 to-violet-100 text-blue-600 rounded-3xl flex items-center justify-center text-3xl mb-5 shadow-sm">
+            <div className="mx-auto w-20 h-20 bg-gradient-to-br from-blue-100 to-violet-100 text-blue-600 rounded-3xl flex items-center justify-center text-3xl mb-5">
               📝
             </div>
 
@@ -231,49 +343,25 @@ function RegistroVisita() {
 
           </div>
 
-          {/* EMPLEADO */}
-          {sesionEmpleado && (
-            <div className="mb-6 bg-gradient-to-r from-blue-50 to-violet-50 border border-blue-100 rounded-2xl p-4">
-
-              <div className="flex items-center gap-3">
-
-                <div className="w-11 h-11 bg-blue-100 rounded-xl flex items-center justify-center">
-                  👤
-                </div>
-
-                <div>
-
-                  <p className="text-slate-400 text-xs">
-                    Empleado responsable
-                  </p>
-
-                  <p className="text-slate-800 font-semibold">
-                    {sesionEmpleado.nombre}
-                  </p>
-
-                  <p className="text-blue-600 text-xs">
-                    {sesionEmpleado.codigo}
-                  </p>
-
-                </div>
-
-              </div>
-
-            </div>
-          )}
-
-          {/* DATOS PERSONALES */}
           <div className="grid md:grid-cols-2 gap-4">
 
             <Campo
               titulo="DNI *"
               placeholder="Ej. 75447166"
               value={dni}
-              onChange={(valor) =>
+              onChange={(
+                valor
+              ) =>
                 setDni(
                   valor
-                    .replace(/\D/g, "")
-                    .slice(0, 8)
+                    .replace(
+                      /\D/g,
+                      ""
+                    )
+                    .slice(
+                      0,
+                      8
+                    )
                 )
               }
             />
@@ -281,12 +369,22 @@ function RegistroVisita() {
             <Campo
               titulo="Celular"
               placeholder="Ej. 921444222"
-              value={celular}
-              onChange={(valor) =>
+              value={
+                celular
+              }
+              onChange={(
+                valor
+              ) =>
                 setCelular(
                   valor
-                    .replace(/\D/g, "")
-                    .slice(0, 9)
+                    .replace(
+                      /\D/g,
+                      ""
+                    )
+                    .slice(
+                      0,
+                      9
+                    )
                 )
               }
             />
@@ -294,20 +392,27 @@ function RegistroVisita() {
             <Campo
               titulo="Nombres *"
               placeholder="Ej. Adriano"
-              value={nombres}
-              onChange={setNombres}
+              value={
+                nombres
+              }
+              onChange={
+                setNombres
+              }
             />
 
             <Campo
               titulo="Apellidos *"
               placeholder="Ej. Pacheco"
-              value={apellidos}
-              onChange={setApellidos}
+              value={
+                apellidos
+              }
+              onChange={
+                setApellidos
+              }
             />
 
           </div>
 
-          {/* ASUNTO */}
           <div className="mt-6">
 
             <label className="text-slate-600 text-sm font-semibold">
@@ -320,9 +425,14 @@ function RegistroVisita() {
                 icono="📚"
                 titulo="Matrícula"
                 descripcion="Inscripción, cursos y horarios"
-                activo={asunto === "Matrícula"}
+                activo={
+                  asunto ===
+                  "Matrícula"
+                }
                 onClick={() =>
-                  setAsunto("Matrícula")
+                  setAsunto(
+                    "Matrícula"
+                  )
                 }
               />
 
@@ -330,9 +440,14 @@ function RegistroVisita() {
                 icono="💰"
                 titulo="Pagos"
                 descripcion="Pensiones, cuotas y recibos"
-                activo={asunto === "Pagos"}
+                activo={
+                  asunto ===
+                  "Pagos"
+                }
                 onClick={() =>
-                  setAsunto("Pagos")
+                  setAsunto(
+                    "Pagos"
+                  )
                 }
               />
 
@@ -340,19 +455,29 @@ function RegistroVisita() {
                 icono="👨‍🏫"
                 titulo="Tutoría"
                 descripcion="Orientación académica"
-                activo={asunto === "Tutoría"}
+                activo={
+                  asunto ===
+                  "Tutoría"
+                }
                 onClick={() =>
-                  setAsunto("Tutoría")
+                  setAsunto(
+                    "Tutoría"
+                  )
                 }
               />
 
               <Opcion
                 icono="📄"
                 titulo="Otros"
-                descripcion="Trámites y otras consultas"
-                activo={asunto === "Otros"}
+                descripcion="Otros trámites o consultas"
+                activo={
+                  asunto ===
+                  "Otros"
+                }
                 onClick={() =>
-                  setAsunto("Otros")
+                  setAsunto(
+                    "Otros"
+                  )
                 }
               />
 
@@ -360,7 +485,6 @@ function RegistroVisita() {
 
           </div>
 
-          {/* CARRERA */}
           <div className="mt-6">
 
             <label className="text-slate-600 text-sm font-semibold">
@@ -368,11 +492,16 @@ function RegistroVisita() {
             </label>
 
             <select
-              value={carrera}
-              onChange={(e) =>
-                setCarrera(e.target.value)
+              value={
+                carrera
               }
-              className="w-full mt-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-4 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              onChange={(e) =>
+                setCarrera(
+                  e.target
+                    .value
+                )
+              }
+              className="w-full mt-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-4 outline-none focus:border-blue-400"
             >
 
               <option value="">
@@ -411,7 +540,6 @@ function RegistroVisita() {
 
           </div>
 
-          {/* CONSULTA */}
           <div className="mt-6">
 
             <label className="text-slate-600 text-sm font-semibold">
@@ -419,19 +547,23 @@ function RegistroVisita() {
             </label>
 
             <textarea
-              value={mensaje}
+              value={
+                mensaje
+              }
               onChange={(e) =>
-                setMensaje(e.target.value)
+                setMensaje(
+                  e.target
+                    .value
+                )
               }
               rows={5}
               placeholder="Describa detalladamente su consulta o motivo de visita..."
-              className="w-full mt-2 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-4 outline-none resize-none placeholder-slate-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              className="w-full mt-2 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-4 outline-none resize-none placeholder-slate-300 focus:border-blue-400"
             />
 
           </div>
 
-          {/* FECHA */}
-          <div className="mt-5 bg-gradient-to-r from-blue-50 to-violet-50 border border-blue-100 rounded-2xl px-5 py-4 flex flex-col sm:flex-row justify-between gap-2">
+          <div className="mt-5 bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4 flex flex-col sm:flex-row justify-between gap-2">
 
             <span className="text-slate-600 text-sm">
               📅 Fecha y hora de ingreso
@@ -443,10 +575,23 @@ function RegistroVisita() {
 
           </div>
 
-          {/* BOTÓN */}
+          <div className="mt-5 bg-orange-50 border border-orange-100 rounded-2xl p-4">
+
+            <p className="text-orange-700 font-semibold text-sm">
+              📌 Visita pendiente de atención
+            </p>
+
+            <p className="text-orange-600/70 text-xs mt-1">
+              Esta visita aparecerá en Visitas Disponibles para que un empleado o administrador pueda gestionarla.
+            </p>
+
+          </div>
+
           <button
-            onClick={registrarVisita}
-            className="w-full mt-6 py-4 bg-gradient-to-r from-blue-600 to-violet-600 text-white font-bold rounded-2xl hover:opacity-90 active:scale-[0.99] transition shadow-md cursor-pointer"
+            onClick={
+              registrarVisita
+            }
+            className="w-full mt-6 py-4 bg-gradient-to-r from-blue-600 to-violet-600 text-white font-bold rounded-2xl hover:opacity-90 cursor-pointer"
           >
             📝 REGISTRAR VISITA
           </button>
@@ -468,7 +613,10 @@ function Campo({
   titulo: string;
   placeholder: string;
   value: string;
-  onChange: (valor: string) => void;
+  onChange:
+    (
+      valor: string
+    ) => void;
 }) {
   return (
     <div>
@@ -480,10 +628,14 @@ function Campo({
       <input
         value={value}
         onChange={(e) =>
-          onChange(e.target.value)
+          onChange(
+            e.target.value
+          )
         }
-        placeholder={placeholder}
-        className="w-full mt-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-4 outline-none placeholder-slate-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition"
+        placeholder={
+          placeholder
+        }
+        className="w-full mt-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-4 outline-none placeholder-slate-300 focus:border-blue-400"
       />
 
     </div>
@@ -506,11 +658,13 @@ function Opcion({
   return (
     <button
       type="button"
-      onClick={onClick}
-      className={`rounded-2xl p-4 border text-center transition-all cursor-pointer ${
+      onClick={
+        onClick
+      }
+      className={`rounded-2xl p-4 border text-center transition cursor-pointer ${
         activo
-          ? "bg-blue-100 border-blue-400 shadow-md scale-[1.02]"
-          : "bg-slate-50 border-slate-200 hover:bg-blue-50 hover:border-blue-200"
+          ? "bg-blue-100 border-blue-400 shadow-md"
+          : "bg-slate-50 border-slate-200 hover:bg-blue-50"
       }`}
     >
 
